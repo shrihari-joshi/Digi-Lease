@@ -1,0 +1,26 @@
+compiling a solidity smart contract-
+
+when compiled gets converted into 2 components Byte Code and ABI (Application Binary Interface)
+Byte Code is hexadecimal code which is then converted into Opcodes executable by EVM (Ethereum Virtual Machine). 
+Only Byte code is hosted/deployed on Ethereum Blockchain.
+Byte Code is immutable hence we can keep it open in public.
+
+ABI acts as a bridge of communication between the written contracts and external components or other smart contracts
+both are written in JSON format
+
+
+pure- no read and no write
+view- only read and no write
+
+local variable- in the stack
+state variable- in the memory (gets deployed on the blockchain)
+
+constructor- a special function that executes only once at the time when contract is created
+uses:
+-used to initialize variable
+-to decide the owner of the contract
+can be initialized with an argument to be passed
+
+
+loops can only be written inside function
+
