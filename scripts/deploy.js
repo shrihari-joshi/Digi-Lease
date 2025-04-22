@@ -1,26 +1,36 @@
+// scripts/deploy.js
 const hre = require("hardhat");
-const prompt = require("prompt-sync")({ sigint: true });
+const fs = require("fs");
+const prompt = require("prompt-sync")();
 
 async function main() {
     const tenantAddress = prompt("Enter tenant address: ");
     const ownerAddress = prompt("Enter owner address: ");
 
-    const rent = hre.ethers.parseEther("1"); // 1 ETH/month
+    const tenantConsent = prompt("Tenant: Do you want to deploy the contract? (yes/no): ");
+    const ownerConsent = prompt("Owner: Do you want to deploy the contract? (yes/no): ");
+
+    if (tenantConsent.toLowerCase() !== "yes" || ownerConsent.toLowerCase() !== "yes") {
+        console.log("Deployment cancelled.");
+        return;
+    }
+
+    const rent = hre.ethers.parseEther("1");
     const deposit = hre.ethers.parseEther("2");
     const total = rent * BigInt(12) + deposit;
 
-    const tenantSigner = await hre.ethers.getSigner(tenantAddress);
-    const RentalEscrow = await hre.ethers.getContractFactory("RentalEscrow", tenantSigner);
-
-    const contract = await RentalEscrow.deploy(ownerAddress, rent, deposit, { value: total });
+    const [deployer] = await hre.ethers.getSigners();
+    const RentalEscrow = await hre.ethers.getContractFactory("RentalEscrow");
+    const contract = await RentalEscrow.connect(deployer).deploy(ownerAddress, rent, deposit, { value: total });
     await contract.waitForDeployment();
 
-    console.log("\n✅ Contract deployed successfully!");
-    console.log("Contract Address:", contract.target);
-    console.log("Tenant Address:", tenantAddress);
-    console.log("Owner Address:", ownerAddress);
+    const contractAddress = await contract.getAddress();
+
+    console.log("Contract deployed at:", contractAddress);
+
+    fs.writeFileSync("contractAddress.json", JSON.stringify({ address: contractAddress }, null, 2));
 }
 
-main().catch((err) => {
-    console.error("❌ Deployment failed:", err);
+main().catch((error) => {
+    console.error("Deployment failed:", error);
 });

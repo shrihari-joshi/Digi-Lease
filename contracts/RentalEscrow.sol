@@ -1,41 +1,54 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.0;
 
 contract RentalEscrow {
     address public tenant;
     address public owner;
-    uint256 public rentAmount;
-    uint256 public depositAmount;
+    uint256 public rent;
+    uint256 public deposit;
     uint256 public startTime;
     uint256 public monthsPaid;
 
-    constructor(address _owner, uint256 _rentAmount, uint256 _depositAmount) payable {
+    bool public isActive;
+
+    constructor(address _owner, uint256 _rent, uint256 _deposit) payable {
         tenant = msg.sender;
         owner = _owner;
-        rentAmount = _rentAmount;
-        depositAmount = _depositAmount;
-        require(msg.value == (_depositAmount + (_rentAmount * 12)), "Insufficient upfront payment");
+        rent = _rent;
+        deposit = _deposit;
         startTime = block.timestamp;
+
+        require(msg.value == (rent * 12 + deposit), "Incorrect initial funds");
+
+        isActive = true;
     }
 
     function releaseRent() public {
-        require(monthsPaid < 12, "All rents already paid");
-
-        uint256 timeElapsed = block.timestamp - startTime;
-        uint256 monthsElapsed = timeElapsed / 60; // 1 month = 60 seconds for simulation
-
-        require(monthsElapsed > monthsPaid, "No rent due yet");
+        require(isActive, "Contract inactive");
+        require(monthsPaid < 12, "All rent paid");
+        require(block.timestamp >= startTime + monthsPaid * 60, "Too early");
 
         monthsPaid++;
-        payable(owner).transfer(rentAmount);
+        payable(owner).transfer(rent);
     }
 
-    function refundDeposit() public {
-        require(monthsPaid == 12, "Rental period not completed");
-        payable(tenant).transfer(depositAmount);
-    }
+    function refundDepositWithDamage(uint256 damagePercent) public {
+        require(isActive, "Contract already closed");
+        require(monthsPaid == 12, "Rent not fully paid");
+        require(msg.sender == tenant || msg.sender == owner, "Unauthorized");
 
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
+        require(damagePercent <= 100, "Invalid damage percentage");
+
+        uint256 damageAmount = (deposit * damagePercent) / 100;
+        uint256 refundAmount = deposit - damageAmount;
+
+        if (damageAmount > 0) {
+            payable(owner).transfer(damageAmount);
+        }
+        if (refundAmount > 0) {
+            payable(tenant).transfer(refundAmount);
+        }
+
+        isActive = false;
     }
 }
