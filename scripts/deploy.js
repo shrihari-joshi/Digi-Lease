@@ -1,4 +1,3 @@
-// scripts/deploy.js
 const hre = require("hardhat");
 const fs = require("fs");
 const prompt = require("prompt-sync")();
@@ -17,18 +16,28 @@ async function main() {
 
     const rent = hre.ethers.parseEther("1");
     const deposit = hre.ethers.parseEther("2");
-    const total = rent * BigInt(12) + deposit;
+    const initialPayment = rent + deposit;
 
     const [deployer] = await hre.ethers.getSigners();
     const RentalEscrow = await hre.ethers.getContractFactory("RentalEscrow");
-    const contract = await RentalEscrow.connect(deployer).deploy(ownerAddress, rent, deposit, { value: total });
-    await contract.waitForDeployment();
 
+    const contract = await RentalEscrow.connect(deployer).deploy(
+        tenantAddress,
+        ownerAddress,
+        rent,
+        deposit,
+        { value: initialPayment }
+    );
+
+    await contract.waitForDeployment();
     const contractAddress = await contract.getAddress();
 
     console.log("Contract deployed at:", contractAddress);
-
-    fs.writeFileSync("contractAddress.json", JSON.stringify({ address: contractAddress }, null, 2));
+    fs.writeFileSync("contractAddress.json", JSON.stringify({
+        address: contractAddress,
+        tenant: tenantAddress,
+        owner: ownerAddress
+    }, null, 2));
 }
 
 main().catch((error) => {
